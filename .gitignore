@@ -1,0 +1,14 @@
+bin
+.wt
+.*.swp
+a.out
+*.orig
+.idea
+.env
+.DS_Store
+.git/
+keys/*
+!keys/.gitkeep
+logs/*
+!logs/.gitkeep
+/docker/mongo

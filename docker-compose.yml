@@ -1,0 +1,76 @@
+version: '3.7'
+
+services:
+  nginx:
+    container_name: nginx
+    build:
+      context: ./docker/nginx
+      args:
+        UID: 1001
+        GID: 1000
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ${APP_DIR}:/var/www/html
+      - ${NGINX_LOG_PATH}:/var/log/nginx
+      - ./docker/nginx/conf:/etc/nginx/conf:ro
+      - ./docker/nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./docker/certbot/etc:/etc/letsencrypt:ro
+      - ./docker/certbot/var:/var/lib/letsencrypt:ro
+  php:
+    container_name: php
+    build:
+      context: ./docker/php
+      args:
+        PHP_VERSION: ${PHP_VERSION}
+        INSTALL_PHALCON: ${INSTALL_PHALCON}
+        PHALCON_VERSION: ${PHALCON_VERSION}
+    restart: unless-stopped
+    ports:
+      - "9000:9000"
+    volumes:
+      - ${APP_DIR}:/var/www/html
+  mysql:
+    image: mysql:8.0.31
+    container_name: mysql
+    hostname: mysql
+    volumes:
+      - /var/mysql:/var/lib/mysql:rw
+    ports:
+      - "${MYSQL_PORT}:${MYSQL_PORT}"
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+    restart: unless-stopped
+    command: >
+      --sql_mode=""
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+      --default-authentication-plugin=mysql_native_password
+  mongo:
+    container_name: mongo
+    image: mongo:6.0.2-focal
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: mongo
+      MONGO_INITDB_ROOT_PASSWORD: mongo
+      MONGODB_DATA_DIR: /data/db
+      MONDODB_LOG_DIR: /dev/null
+    volumes:
+      - ./docker/mongo/backups:/backups
+      - ./docker/mongo:/data/db:rw
+    ports:
+      - '27017:27017'
+    command: mongod --dbpath /data/db --bind_ip_all --port 27017 --oplogSize 16 --wiredTigerCacheSizeGB 8 --quiet
+
+networks:
+  default:
+    ipam:
+      driver: default
+      config:
+        - subnet: "172.16.238.0/24"
+        - subnet: "2001:3984:3989::/64"
